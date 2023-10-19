@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math"
 
 	raylib "github.com/gen2brain/raylib-go/raylib"
@@ -13,10 +12,8 @@ const (
 	TWO_PI = math.Pi * 2
 
 	PATH = "images/bird.png"
-	N    = 200
+	N    = 8
 )
-
-var r float32 = float32(380)
 
 type Line struct {
 	startPos raylib.Vector2
@@ -29,77 +26,96 @@ type Pixel struct {
 	color raylib.Color
 }
 
+var r float32
 var lines []Line
+
+// Can do a line strip instead since we're doing the greedy algo
+// DrawLineStrip(Vector2 *points, int pointCount, Color color);
+// var lineSeq []raylib.Vector2
+
 var pixels []Pixel
 
-func calculateRadius(a, b int) {
-	r = float32(math.Sqrt((math.Pow(float64(a), 2) + math.Pow(float64(b), 2)) / 4))
-}
-
-func uploadImage() {
+func processImage() {
 	img := raylib.LoadImage(PATH)
 	bounds := img.ToImage().Bounds()
-	calculateRadius(bounds.Max.X, bounds.Max.Y)
+	r = calculateRadius(bounds.Max.X, bounds.Max.Y)
 
 	for i, c := range raylib.LoadImageColors(img) {
 		x := (i % bounds.Max.X) - bounds.Max.X/2
 		y := (i / bounds.Max.Y) - bounds.Max.Y/2
 
 		pos := centerVector(float32(x), float32(y))
-		toGray := grayscale(c)
+		toGray := toGrayScale(c)
 
 		r, g, b, a := toGray.RGBA()
 		whiteness := (r + g + b) / (255 + 255 + 255)
 
 		if a > uint32(10) && whiteness < uint32(120) {
-			pixels = append(pixels, Pixel{pos, grayscale(c)})
+			pixels = append(pixels, Pixel{pos, toGrayScale(c)})
 		}
 
 	}
 }
 
-func calculateLines() {
-	// Real way to solve this:
-	// - greedy algo:
-	// - start at arbitrary node
-	// - find line that will minimize error the most
-	// - repeat process starting at prev line endPos
-	// - escape when no line will minimize the error
-
-	fmt.Printf("\n\n START \n\n")
-	fmt.Printf("pixels %v", len(pixels))
-
+func addLine(startPos, endPos int) {
 	seg := TWO_PI / float64(N)
-	for i := 0; i < N-1; i++ {
-		for j := i + 1; j < N; j++ {
-			theta_i := seg * float64(i)
-			y_i := float32(float64(r) * math.Sin(theta_i))
-			x_i := float32(float64(r) * math.Cos(theta_i))
 
-			theta_j := seg * float64(j)
-			y_j := float32(float64(r) * math.Sin(theta_j))
-			x_j := float32(float64(r) * math.Cos(theta_j))
+	startTheta := seg * float64(startPos)
+	startV := centerVector(float32(float64(r)*math.Cos(startTheta)), float32(float64(r)*math.Sin(startTheta)))
 
-			lineVector_i := centerVector(x_i, y_i)
-			lineVector_j := centerVector(x_j, y_j)
+	endTheta := seg * float64(endPos)
+	endV := centerVector(float32(float64(r)*math.Cos(endTheta)), float32(float64(r)*math.Sin(endTheta)))
 
-			isIntersecting := false
-			for _, p := range pixels {
-				if raylib.CheckCollisionPointLine(p.pos, lineVector_i, lineVector_j, 1) {
-					isIntersecting = true
-					break
-				}
-			}
+	lines = append(lines, Line{startV, endV, raylib.DarkGray})
+}
 
-			if !isIntersecting {
-				lines = append(lines, Line{lineVector_i, lineVector_j, raylib.DarkGray})
-			}
+func calculateError() int {
+	return 0
+}
+
+func findBestLine(startPos int, drawn map[int]bool) {
+
+	// minError := calcCurrentError()
+	// for all int m between [0,N] where startPoint != m & !drawn[nm]
+	//		calc err with this line drawn
+	//		if this line is better, store the endPos and minError
+	//			minError = min(minError, err)
+	//			endPos = m
+
+	// if the minError was NOT improved, return
+
+	// else:
+	//	update inclusionScalar for this line to 1 (i.e. include this line)
+	//	update drawn for this line
+	//	look for new best line -> findBestLine(endPos, drawn)
+
+	var endPos int
+	found := false
+	minError := calculateError()
+
+	for p := 0; p < N; p++ {
+		if startPos == p || drawn[toIntKey(startPos, p)] {
+			continue
+		}
+
+		err := calculateError()
+		if err < minError {
+			minError = err
+			endPos = p
+			found = true
 		}
 	}
 
-	fmt.Printf("\n\n END \n\n")
-	fmt.Printf("lines %v", len(lines))
+	if found {
+		addLine(startPos, endPos)
+		drawn[toIntKey(startPos, endPos)] = true
+		findBestLine(endPos, drawn)
+	}
 
+}
+
+func processLines() {
+	findBestLine(0, make(map[int]bool))
 }
 
 func drawNodes() {
@@ -134,23 +150,23 @@ func main() {
 	start()
 
 	for !raylib.WindowShouldClose() {
-		dt := raylib.GetFrameTime()
-		t += dt
-		draw(dt)
+		draw()
 	}
 }
 
 func start() {
-	uploadImage()
-	calculateLinesAlt()
+	// processImage()
+	// processLines()
 }
 
-func draw(dt float32) {
+func draw() {
 	raylib.BeginDrawing()
 	defer raylib.EndDrawing()
 
 	raylib.ClearBackground(raylib.RayWhite)
 
-	drawLines()
-	drawImage()
+	// drawNodes()
+	// drawLines()
+	// drawImage()
+
 }
