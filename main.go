@@ -1,6 +1,7 @@
 package main
 
 import (
+	"image"
 	"math"
 
 	raylib "github.com/gen2brain/raylib-go/raylib"
@@ -11,134 +12,92 @@ const (
 	HEIGHT = 800
 	TWO_PI = math.Pi * 2
 
-	PATH = "images/bird.png"
+	PATH = "images/mosdef.jpeg"
 	N    = 8
+
+	SEG = TWO_PI / float64(N)
 )
 
-type Line struct {
-	startPos raylib.Vector2
-	endPos   raylib.Vector2
-	color    raylib.Color
-}
-
-type Pixel struct {
-	pos   raylib.Vector2
-	color raylib.Color
-}
-
 var r float32
-var lines []Line
 
-// Can do a line strip instead since we're doing the greedy algo
-// DrawLineStrip(Vector2 *points, int pointCount, Color color);
-// var lineSeq []raylib.Vector2
+var bounds image.Rectangle
+var colors []raylib.Color
+var grayscale []float64
 
-var pixels []Pixel
+var pins []raylib.Vector2
+var lines [][2]raylib.Vector2
+
+func calculateLinePointPosition(n int) raylib.Vector2 {
+	theta := SEG * float64(n)
+	return centerVector(float32(float64(r)*math.Cos(theta)), float32(float64(r)*math.Sin(theta)))
+}
 
 func processImage() {
-	img := raylib.LoadImage(PATH)
-	bounds := img.ToImage().Bounds()
-	r = calculateRadius(bounds.Max.X, bounds.Max.Y)
+	imgRaw := raylib.LoadImage(PATH)
+	raylib.ImageColorGrayscale(imgRaw)
 
-	for i, c := range raylib.LoadImageColors(img) {
-		x := (i % bounds.Max.X) - bounds.Max.X/2
-		y := (i / bounds.Max.Y) - bounds.Max.Y/2
+	bounds = imgRaw.ToImage().Bounds()
+	r = calculateRadius(bounds.Max.X, bounds.Max.Y, INSCRIBE_MIN)
 
-		pos := centerVector(float32(x), float32(y))
-		toGray := toGrayScale(c)
+	colors = raylib.LoadImageColors(imgRaw)
+	grayscale = make([]float64, len(colors))
+	for i, c := range colors {
 
-		r, g, b, a := toGray.RGBA()
-		whiteness := (r + g + b) / (255 + 255 + 255)
-
-		if a > uint32(10) && whiteness < uint32(120) {
-			pixels = append(pixels, Pixel{pos, toGrayScale(c)})
-		}
-
-	}
-}
-
-func addLine(startPos, endPos int) {
-	seg := TWO_PI / float64(N)
-
-	startTheta := seg * float64(startPos)
-	startV := centerVector(float32(float64(r)*math.Cos(startTheta)), float32(float64(r)*math.Sin(startTheta)))
-
-	endTheta := seg * float64(endPos)
-	endV := centerVector(float32(float64(r)*math.Cos(endTheta)), float32(float64(r)*math.Sin(endTheta)))
-
-	lines = append(lines, Line{startV, endV, raylib.DarkGray})
-}
-
-func calculateError() int {
-	return 0
-}
-
-func findBestLine(startPos int, drawn map[int]bool) {
-
-	// minError := calcCurrentError()
-	// for all int m between [0,N] where startPoint != m & !drawn[nm]
-	//		calc err with this line drawn
-	//		if this line is better, store the endPos and minError
-	//			minError = min(minError, err)
-	//			endPos = m
-
-	// if the minError was NOT improved, return
-
-	// else:
-	//	update inclusionScalar for this line to 1 (i.e. include this line)
-	//	update drawn for this line
-	//	look for new best line -> findBestLine(endPos, drawn)
-
-	var endPos int
-	found := false
-	minError := calculateError()
-
-	for p := 0; p < N; p++ {
-		if startPos == p || drawn[toIntKey(startPos, p)] {
-			continue
-		}
-
-		err := calculateError()
-		if err < minError {
-			minError = err
-			endPos = p
-			found = true
+		if c.A > 50 {
+			grayscale[i] = float64(c.R)
+		} else {
+			grayscale[i] = 255
 		}
 	}
 
-	if found {
-		addLine(startPos, endPos)
-		drawn[toIntKey(startPos, endPos)] = true
-		findBestLine(endPos, drawn)
-	}
+	raylib.UnloadImage(imgRaw)
+}
 
+func processPins() {
+	for i := 0; i < N; i++ {
+		pos := calculateLinePointPosition(i)
+		pins = append(pins, pos)
+	}
+}
+
+func processAllPotentialLines() {
+	for i := 0; i < N-1; i++ {
+		for j := i + 1; j < N; j++ {
+			lines = append(lines, [2]raylib.Vector2{pins[i], pins[j]})
+		}
+	}
 }
 
 func processLines() {
-	findBestLine(0, make(map[int]bool))
-}
+	// 	Greedy approach:
+	//		-> start at n=0
+	//		-> for all lines connected to pins[n]
+	//			-> if already visited, continue
+	//			-> if too close to pin, continue
+	//			-> find line of best fit
+	//		-> set best line as visited
+	//		-> set pos = second point of best line
+	//		-> loop
+	//		-
+	//		-> break if no line improves the cost? (definition of "cost"?)
+	//		-> break if max iter (i.e. max lines) is reached?
+	//		-> break if all connected lines have already been visited?
 
-func drawNodes() {
-	seg := TWO_PI / float64(N)
-	for i := 0; i < N; i++ {
-		theta := seg * float64(i)
-		y := float32(float64(r) * math.Sin(theta))
-		x := float32(float64(r) * math.Cos(theta))
-		raylib.DrawCircleV(centerVector(x, y), 1, raylib.Black)
-	}
+	// * find line of best fit?
+	//		-> The high grayscale sum along the line?
+	//		-> buffer around pixels surrounding line?
 }
 
 func drawLines() {
-	for _, l := range lines {
-		raylib.DrawLineV(l.startPos, l.endPos, l.color)
-		// raylib.DrawLineEx(l.startPos, l.endPos, 5, l.color)
-	}
+	// Option 1: Render all calculated lines
+	// Option 2: Animate a line for each dt
 }
 
-func drawImage() {
-	for _, p := range pixels {
-		raylib.DrawPixelV(p.pos, raylib.ColorAlpha(p.color, 1))
-	}
+func printStringPath() {
+	// Print array of n positions in order for string art
+	// For example:
+	//	given path is [0, 4, 3]
+	//	we should start at 0 and connect a string from 0 -> 4 -> 3
 }
 
 func main() {
@@ -155,8 +114,17 @@ func main() {
 }
 
 func start() {
-	// processImage()
-	// processLines()
+	// Upload image and store in grayscale pixel array
+	processImage()
+
+	// Calculate the pins vector2 array
+	processPins()
+
+	// Calculate and store pixel array of all potential lines
+	processAllPotentialLines()
+
+	// Greedy algo to find line of best fit until threshold
+	processLines()
 }
 
 func draw() {
@@ -165,8 +133,8 @@ func draw() {
 
 	raylib.ClearBackground(raylib.RayWhite)
 
-	// drawNodes()
-	// drawLines()
-	// drawImage()
-
+	// debug_draw_pixelArr_image()
+	// debug_draw_circle()
+	debug_draw_pins()
+	debug_draw_potential_lines()
 }
