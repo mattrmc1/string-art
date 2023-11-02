@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"image"
 	"math"
 
@@ -12,11 +13,19 @@ const (
 	HEIGHT = 800
 	TWO_PI = math.Pi * 2
 
-	PATH = "images/mosdef.jpeg"
-	N    = 8
+	PATH   = "images/mosdef.jpeg"
+	N      = 8
+	BUFFER = 1
 
-	SEG = TWO_PI / float64(N)
+	SEG   = TWO_PI / float64(N)
+	MAX_L = (N * (N - 1)) / 2
 )
+
+type Line struct {
+	start  raylib.Vector2
+	end    raylib.Vector2
+	pixels []raylib.Vector2
+}
 
 var r float32
 
@@ -25,7 +34,18 @@ var colors []raylib.Color
 var grayscale []float64
 
 var pins []raylib.Vector2
-var lines [][2]raylib.Vector2
+var lines = map[string]Line{}
+
+// #region tmp
+
+var lines_old = map[string][2]raylib.Vector2{}
+var linesAlt = map[string][][]float64{}
+var lines_y = map[string][]float64{}
+var lines_x = map[string][]float64{}
+
+// #endregion tmp
+
+var path []int
 
 func calculateLinePointPosition(n int) raylib.Vector2 {
 	theta := SEG * float64(n)
@@ -62,38 +82,82 @@ func processPins() {
 
 func processAllPotentialLines() {
 	for i := 0; i < N-1; i++ {
-		for j := i + 1; j < N; j++ {
-			lines = append(lines, [2]raylib.Vector2{pins[i], pins[j]})
+		for j := i + BUFFER; j < N; j++ {
+			k := toStrKey(i, j)
+			lines[k] = createLine(pins[i], pins[j])
+
+			// start := pins[i]
+			// end := pins[j]
+			// lines_old[k] = [2]raylib.Vector2{start, end}
+
+			// xs, ys := lineToPixelArr(start, end)
+			// lines_x[k] = xs
+			// lines_y[k] = ys
+
+			// linesAlt[k] = make([][]float64, len(xs))
+			// linesAlt[k][0] = xs
+			// linesAlt[k][1] = ys
 		}
 	}
 }
 
-func processLines() {
-	// 	Greedy approach:
-	//		-> start at n=0
-	//		-> for all lines connected to pins[n]
-	//			-> if already visited, continue
-	//			-> if too close to pin, continue
-	//			-> find line of best fit
-	//		-> set best line as visited
-	//		-> set pos = second point of best line
-	//		-> loop
-	//		-
-	//		-> break if no line improves the cost? (definition of "cost"?)
-	//		-> break if max iter (i.e. max lines) is reached?
-	//		-> break if all connected lines have already been visited?
-
-	// * find line of best fit?
-	//		-> The high grayscale sum along the line?
-	//		-> buffer around pixels surrounding line?
+func calculateCost(err []float64, l [2]raylib.Vector2) float64 {
+	// TODO
+	return 1.0
 }
 
-func drawLines() {
+func processLines() {
+
+	var cost []float64 // white bounds - grayscale
+
+	visited := map[string]bool{}
+	startPin := 0
+
+	for i := 0; i < MAX_L; i++ {
+		endPin := -1
+		maxErr := 0.0
+
+		for n := BUFFER; n < N-BUFFER; n++ {
+			p := (startPin + n) % N
+			k := toStrKey(startPin, p)
+			if visited[k] {
+				continue
+			}
+
+			curErr := calculateCost(cost, lines_old[k])
+			if curErr > maxErr {
+				maxErr = curErr
+				endPin = p
+			}
+		}
+
+		if endPin == -1 {
+			break
+		}
+
+		path = append(path, endPin)
+		visited[toStrKey(startPin, endPin)] = true
+
+		startPin = endPin
+	}
+}
+
+func drawPath() {
 	// Option 1: Render all calculated lines
+	for i := range path {
+		if i == 0 {
+			continue
+		}
+
+		k := toStrKey(path[i], path[i-1])
+		raylib.DrawLineV(lines_old[k][0], lines_old[k][1], raylib.LightGray)
+
+	}
 	// Option 2: Animate a line for each dt
 }
 
-func printStringPath() {
+func printPath() {
+	fmt.Println(path)
 	// Print array of n positions in order for string art
 	// For example:
 	//	given path is [0, 4, 3]
@@ -106,14 +170,14 @@ func main() {
 
 	raylib.SetTargetFPS(60)
 
-	start()
+	process()
 
 	for !raylib.WindowShouldClose() {
 		draw()
 	}
 }
 
-func start() {
+func process() {
 	// Upload image and store in grayscale pixel array
 	processImage()
 
@@ -133,8 +197,13 @@ func draw() {
 
 	raylib.ClearBackground(raylib.RayWhite)
 
-	// debug_draw_pixelArr_image()
+	debug_draw_image()
 	// debug_draw_circle()
 	debug_draw_pins()
 	debug_draw_potential_lines()
+	// debug_draw_potential_lines_old()
+	// debug_draw_potential_lines_seperate()
+	// debug_draw_potential_lines_alt()
+
+	// drawPath()
 }
