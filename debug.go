@@ -18,39 +18,6 @@ func debug_draw_pins() {
 	}
 }
 
-func debug_draw_potential_lines_old() {
-	for _, lineV := range lines_old {
-		p1 := lineV[0]
-		p2 := lineV[1]
-		raylib.DrawLineV(p1, p2, raylib.LightGray)
-	}
-}
-
-func debug_draw_potential_lines_seperate() {
-	for k, xs := range lines_x {
-		points := make([]raylib.Vector2, len(xs))
-		ys := lines_y[k]
-		for i, x := range xs {
-			y := ys[i]
-			points[i] = raylib.Vector2{float32(x), float32(y)}
-		}
-		raylib.DrawLineStrip(points, int32(len(xs)), raylib.Green)
-	}
-}
-
-func debug_draw_potential_lines_alt() {
-	for _, l := range linesAlt {
-		points := make([]raylib.Vector2, len(l))
-		xs := l[0]
-		ys := l[1]
-		for i, x := range xs {
-			y := ys[i]
-			points[i] = raylib.Vector2{float32(x), float32(y)}
-		}
-		raylib.DrawLineStrip(points, int32(len(xs)), raylib.Blue)
-	}
-}
-
 func debug_draw_potential_lines() {
 	for _, l := range lines {
 		raylib.DrawLineStrip(l.pixels, int32(len(l.pixels)), raylib.DarkGreen)

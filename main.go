@@ -36,15 +36,6 @@ var grayscale []float64
 var pins []raylib.Vector2
 var lines = map[string]Line{}
 
-// #region tmp
-
-var lines_old = map[string][2]raylib.Vector2{}
-var linesAlt = map[string][][]float64{}
-var lines_y = map[string][]float64{}
-var lines_x = map[string][]float64{}
-
-// #endregion tmp
-
 var path []int
 
 func calculateLinePointPosition(n int) raylib.Vector2 {
@@ -85,23 +76,11 @@ func processAllPotentialLines() {
 		for j := i + BUFFER; j < N; j++ {
 			k := toStrKey(i, j)
 			lines[k] = createLine(pins[i], pins[j])
-
-			// start := pins[i]
-			// end := pins[j]
-			// lines_old[k] = [2]raylib.Vector2{start, end}
-
-			// xs, ys := lineToPixelArr(start, end)
-			// lines_x[k] = xs
-			// lines_y[k] = ys
-
-			// linesAlt[k] = make([][]float64, len(xs))
-			// linesAlt[k][0] = xs
-			// linesAlt[k][1] = ys
 		}
 	}
 }
 
-func calculateCost(err []float64, l [2]raylib.Vector2) float64 {
+func calculateCost(err []float64, l Line) float64 {
 	// TODO
 	return 1.0
 }
@@ -115,7 +94,7 @@ func processLines() {
 
 	for i := 0; i < MAX_L; i++ {
 		endPin := -1
-		maxErr := 0.0
+		maxCost := 0.0
 
 		for n := BUFFER; n < N-BUFFER; n++ {
 			p := (startPin + n) % N
@@ -124,9 +103,9 @@ func processLines() {
 				continue
 			}
 
-			curErr := calculateCost(cost, lines_old[k])
-			if curErr > maxErr {
-				maxErr = curErr
+			curCost := calculateCost(cost, lines[k])
+			if curCost > maxCost {
+				maxCost = curCost
 				endPin = p
 			}
 		}
@@ -143,25 +122,18 @@ func processLines() {
 }
 
 func drawPath() {
-	// Option 1: Render all calculated lines
 	for i := range path {
 		if i == 0 {
 			continue
 		}
 
 		k := toStrKey(path[i], path[i-1])
-		raylib.DrawLineV(lines_old[k][0], lines_old[k][1], raylib.LightGray)
-
+		raylib.DrawLineV(lines[k].start, lines[k].end, raylib.LightGray)
 	}
-	// Option 2: Animate a line for each dt
 }
 
 func printPath() {
 	fmt.Println(path)
-	// Print array of n positions in order for string art
-	// For example:
-	//	given path is [0, 4, 3]
-	//	we should start at 0 and connect a string from 0 -> 4 -> 3
 }
 
 func main() {
@@ -198,12 +170,9 @@ func draw() {
 	raylib.ClearBackground(raylib.RayWhite)
 
 	debug_draw_image()
-	// debug_draw_circle()
+	debug_draw_circle()
 	debug_draw_pins()
 	debug_draw_potential_lines()
-	// debug_draw_potential_lines_old()
-	// debug_draw_potential_lines_seperate()
-	// debug_draw_potential_lines_alt()
 
 	// drawPath()
 }
