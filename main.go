@@ -13,12 +13,14 @@ const (
 	HEIGHT = 800
 	TWO_PI = math.Pi * 2
 
-	PATH   = "images/mosdef.jpeg"
-	N      = 8
-	BUFFER = 1
+	PATH        = "images/mosdef.jpeg"
+	N           = 288
+	BUFFER      = 10
+	LINE_WEIGHT = 20
 
-	SEG   = TWO_PI / float64(N)
-	MAX_L = (N * (N - 1)) / 2
+	SEG = TWO_PI / float64(N)
+	// MAX_L = (N * (N - 1)) / 2
+	MAX_L = 4000
 )
 
 type Line struct {
@@ -53,12 +55,7 @@ func processImage() {
 	colors = raylib.LoadImageColors(imgRaw)
 	grayscale = make([]float64, len(colors))
 	for i, c := range colors {
-
-		if c.A > 50 {
-			grayscale[i] = float64(c.R)
-		} else {
-			grayscale[i] = 255
-		}
+		grayscale[i] = 255 - float64(c.R)
 	}
 
 	raylib.UnloadImage(imgRaw)
@@ -80,14 +77,25 @@ func processAllPotentialLines() {
 	}
 }
 
-func calculateCost(err []float64, l Line) float64 {
-	// TODO
-	return 1.0
+func calculateCost(grayscaleCopy []float64, l Line) float64 {
+	sum := 0.0
+	for _, px := range l.pixels {
+		x := int(px.X) - WIDTH/2 + bounds.Max.X/2
+		y := int(px.Y) - HEIGHT/2 + bounds.Max.Y/2
+		i := y*bounds.Max.X + x
+
+		if i < 0 || i > len(grayscaleCopy)-1 {
+			continue
+		}
+		sum += math.Max(grayscaleCopy[i], 0)
+	}
+	return sum
 }
 
 func processLines() {
 
-	var cost []float64 // white bounds - grayscale
+	var grayscaleCopy = make([]float64, len(grayscale))
+	copy(grayscaleCopy, grayscale)
 
 	visited := map[string]bool{}
 	startPin := 0
@@ -103,21 +111,35 @@ func processLines() {
 				continue
 			}
 
-			curCost := calculateCost(cost, lines[k])
+			curCost := calculateCost(grayscaleCopy, lines[k])
 			if curCost > maxCost {
+				fmt.Println(curCost)
 				maxCost = curCost
 				endPin = p
 			}
 		}
 
 		if endPin == -1 {
+			fmt.Printf("\n\n\nBROKE LOOP at %v, cost %v\n\n\n", i, maxCost)
 			break
 		}
 
 		path = append(path, endPin)
-		visited[toStrKey(startPin, endPin)] = true
+		k := toStrKey(startPin, endPin)
+		visited[k] = true
+
+		for _, px := range lines[k].pixels {
+			x := int(px.X) - WIDTH/2 + bounds.Max.X/2
+			y := int(px.Y) - HEIGHT/2 + bounds.Max.Y/2
+			i := y*bounds.Max.X + x
+			if i < 0 || i > len(grayscaleCopy)-1 {
+				continue
+			}
+			grayscaleCopy[i] = math.Max(grayscaleCopy[i]-LINE_WEIGHT, 0)
+		}
 
 		startPin = endPin
+		fmt.Printf("Processing... (%v/%v)\n", len(path), MAX_L)
 	}
 }
 
@@ -128,12 +150,14 @@ func drawPath() {
 		}
 
 		k := toStrKey(path[i], path[i-1])
-		raylib.DrawLineV(lines[k].start, lines[k].end, raylib.LightGray)
+		raylib.DrawLineV(lines[k].start, lines[k].end, raylib.Black)
 	}
 }
 
 func printPath() {
+	fmt.Println()
 	fmt.Println(path)
+	fmt.Println()
 }
 
 func main() {
@@ -161,6 +185,8 @@ func process() {
 
 	// Greedy algo to find line of best fit until threshold
 	processLines()
+
+	// printPath()
 }
 
 func draw() {
@@ -169,10 +195,12 @@ func draw() {
 
 	raylib.ClearBackground(raylib.RayWhite)
 
-	debug_draw_image()
-	debug_draw_circle()
-	debug_draw_pins()
-	debug_draw_potential_lines()
+	// debug_draw_image()
+	// debug_draw_circle()
+	// debug_draw_pins()
+	// debug_draw_potential_lines()
+	// debug_draw_potential_line_px()
+	// debug_draw_potential_lines_img()
 
-	// drawPath()
+	drawPath()
 }

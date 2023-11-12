@@ -24,6 +24,35 @@ func debug_draw_potential_lines() {
 	}
 }
 
+func debug_draw_potential_line_px() {
+	for _, l := range lines {
+		for _, px := range l.pixels {
+			raylib.DrawPixelV(px, raylib.Brown)
+		}
+
+	}
+}
+
+func debug_draw_potential_lines_img() {
+	for _, l := range lines {
+		for _, px := range l.pixels {
+			x := int(px.X) - WIDTH/2 + bounds.Max.X/2
+			y := int(px.Y) - HEIGHT/2 + bounds.Max.Y/2
+			i := y*bounds.Max.X + x
+
+			var c color.RGBA
+			if i < 0 || i > len(grayscale)-1 {
+				c = raylib.Red
+			} else {
+				g := uint8(grayscale[i])
+				c = color.RGBA{g, g, g, 255}
+			}
+
+			raylib.DrawPixelV(px, c)
+		}
+	}
+}
+
 func debug_draw_image() {
 	for x := 0; x < bounds.Max.X; x++ {
 		for y := 0; y < bounds.Max.Y; y++ {
