@@ -186,7 +186,7 @@ func main() {
 	raylib.InitWindow(WIDTH, HEIGHT, "String Art")
 	defer raylib.CloseWindow()
 
-	// raylib.SetTargetFPS(60)
+	raylib.SetTargetFPS(240)
 
 	process()
 
