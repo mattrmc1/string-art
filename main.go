@@ -20,7 +20,7 @@ const (
 
 	SEG = TWO_PI / float64(N)
 	// MAX_L = (N * (N - 1)) / 2
-	MAX_L = 4000
+	MAX_L = 3000
 )
 
 type Line struct {
@@ -155,21 +155,25 @@ func drawPath() {
 
 var pIdx = 1
 
-func animatePath() {
-	if pIdx-1 > len(path) {
+func animatePath(dt float32, repeat bool) {
+
+	if repeat && pIdx > len(path)-1 {
 		pIdx = 1
 	}
 
-	for i := 1; i <= pIdx; i++ {
+	idx := int(math.Min(float64(pIdx), float64(len(path)-1)))
+	for i := 1; i <= idx; i++ {
 		k := toStrKey(path[i], path[i-1])
 		raylib.DrawLineV(lines[k].start, lines[k].end, raylib.DarkGray)
 	}
 
-	pIdx += 1
-}
-
-func drawLineCount() {
 	raylib.DrawText(fmt.Sprintf("Line count: %v", pIdx), 12.0, 12.0, 32, raylib.Black)
+	raylib.DrawText(fmt.Sprintf("dt: %v", dt), 12.0, HEIGHT-12-32-12-32, 32, raylib.Black)
+	raylib.DrawText(fmt.Sprintf("FPS: %v", raylib.GetFPS()), 12.0, HEIGHT-12-32, 32, raylib.Black)
+
+	if pIdx < len(path) || repeat {
+		pIdx += 1
+	}
 }
 
 func printPath() {
@@ -182,12 +186,13 @@ func main() {
 	raylib.InitWindow(WIDTH, HEIGHT, "String Art")
 	defer raylib.CloseWindow()
 
-	raylib.SetTargetFPS(60)
+	// raylib.SetTargetFPS(60)
 
 	process()
 
 	for !raylib.WindowShouldClose() {
-		draw()
+		dt := raylib.GetFrameTime()
+		draw(dt)
 	}
 }
 
@@ -207,7 +212,7 @@ func process() {
 	// printPath()
 }
 
-func draw() {
+func draw(dt float32) {
 	raylib.BeginDrawing()
 	defer raylib.EndDrawing()
 
@@ -221,6 +226,5 @@ func draw() {
 	// debug_draw_potential_lines_img()
 
 	// drawPath()
-	animatePath()
-	drawLineCount()
+	animatePath(dt, true)
 }
