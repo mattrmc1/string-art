@@ -113,16 +113,15 @@ func processLines() {
 
 			curCost := calculateCost(grayscaleCopy, lines[k])
 			if curCost > maxCost {
-				fmt.Println(curCost)
 				maxCost = curCost
 				endPin = p
 			}
 		}
 
-		if endPin == -1 {
-			fmt.Printf("\n\n\nBROKE LOOP at %v, cost %v\n\n\n", i, maxCost)
-			break
-		}
+		// if endPin == -1 {
+		// 	fmt.Printf("\n\n\nBROKE LOOP at %v, cost %v\n\n\n", i, maxCost)
+		// 	break
+		// }
 
 		path = append(path, endPin)
 		k := toStrKey(startPin, endPin)
@@ -139,7 +138,7 @@ func processLines() {
 		}
 
 		startPin = endPin
-		fmt.Printf("Processing... (%v/%v)\n", len(path), MAX_L)
+		// fmt.Printf("Processing... (%v/%v)\n", len(path), MAX_L)
 	}
 }
 
@@ -152,6 +151,25 @@ func drawPath() {
 		k := toStrKey(path[i], path[i-1])
 		raylib.DrawLineV(lines[k].start, lines[k].end, raylib.Black)
 	}
+}
+
+var pIdx = 1
+
+func animatePath() {
+	if pIdx-1 > len(path) {
+		pIdx = 1
+	}
+
+	for i := 1; i <= pIdx; i++ {
+		k := toStrKey(path[i], path[i-1])
+		raylib.DrawLineV(lines[k].start, lines[k].end, raylib.DarkGray)
+	}
+
+	pIdx += 1
+}
+
+func drawLineCount() {
+	raylib.DrawText(fmt.Sprintf("Line count: %v", pIdx), 12.0, 12.0, 32, raylib.Black)
 }
 
 func printPath() {
@@ -202,5 +220,7 @@ func draw() {
 	// debug_draw_potential_line_px()
 	// debug_draw_potential_lines_img()
 
-	drawPath()
+	// drawPath()
+	animatePath()
+	drawLineCount()
 }
