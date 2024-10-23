@@ -13,14 +13,14 @@ const (
 	HEIGHT = 800
 	TWO_PI = math.Pi * 2
 
-	PATH        = "images/mosdef.jpeg"
+	PATH        = "images/face.jpg"
 	N           = 288
 	BUFFER      = 10
 	LINE_WEIGHT = 20
 
 	SEG = TWO_PI / float64(N)
 	// MAX_L = (N * (N - 1)) / 2
-	MAX_L = 3000
+	MAX_L = 4000
 )
 
 type Line struct {
@@ -149,7 +149,7 @@ func drawPath() {
 		}
 
 		k := toStrKey(path[i], path[i-1])
-		raylib.DrawLineV(lines[k].start, lines[k].end, raylib.Black)
+		raylib.DrawLineV(lines[k].start, lines[k].end, raylib.DarkGray)
 	}
 }
 
